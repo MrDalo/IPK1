@@ -5,6 +5,8 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include<sys/socket.h>
+#include<unistd.h>
+
 
 void getHostName()
 {
@@ -32,11 +34,63 @@ void getHostName()
 
 void processorUsage()
 {
+	int repeatForTimes = 2;
+	FILE *cpuStat = fopen("/proc/stat", "r");
+	if(cpuStat == NULL)
+	{
+		fprintf(stderr, "Error in reading CPU stat file\n");
+		exit(1);
+
+	}
+	
+	char inputArray[4097];
+	const char delime[] = " ";
+	long int i, sum, idle, lastSum, lastIdle = 0;
+	long double idleFraction;
+
+	while(repeatForTimes > 0)
+	{
 
 
+		FILE *cpuStat = fopen("/proc/stat", "r");
+		if(cpuStat == NULL)
+		{
+			fprintf(stderr, "Error in reading CPU stat file\n");
+			exit(1);
+
+		}
+		
+		fgets(inputArray, 4096, cpuStat);
+		fclose(cpuStat);	
+		char *token;
+		token = strtok(inputArray, delime);
+		i= 0;
+		sum = 0;
+
+		while(token != NULL)
+		{
+			token = strtok(NULL, delime);
+			if(token!=NULL)
+				sum+=atoi(token);
+
+			if(i == 3)
+				idle = atoi(token);
+
+			i++;
+		}
+		
+		idleFraction = 100 - (idle-lastIdle)*100.0/(sum-lastSum);
+		printf("Busy for: %Lf\n", idleFraction);
+
+		lastIdle = idle;
+		lastSum = sum;
+		repeatForTimes --;
+		sleep(2);
+
+	}
 
 
-
+	
 }
 
 void processorName()
@@ -71,7 +125,7 @@ void processorName()
 			}
 		}
 	}
-
+	printf("\n");
 	fclose(cpuName);
 }
 
