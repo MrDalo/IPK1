@@ -35,18 +35,10 @@ void getHostName()
 void processorUsage()
 {
 	int repeatForTimes = 2;
-	FILE *cpuStat = fopen("/proc/stat", "r");
-	if(cpuStat == NULL)
-	{
-		fprintf(stderr, "Error in reading CPU stat file\n");
-		exit(1);
-
-	}
 	
 	char inputArray[4097];
 	const char delime[] = " ";
-	long int i, sum, idle, lastSum, lastIdle = 0;
-	long double idleFraction;
+	long long int i, noIdle, idle, lastNoIdle, lastIdle, total, lastTotal, totald, idled = 0;
 
 	while(repeatForTimes > 0)
 	{
@@ -65,31 +57,50 @@ void processorUsage()
 		char *token;
 		token = strtok(inputArray, delime);
 		i= 0;
-		sum = 0;
+		noIdle = 0;
+		idle = 0;
 
 		while(token != NULL)
 		{
 			token = strtok(NULL, delime);
-			if(token!=NULL)
-				sum+=atoi(token);
-
-			if(i == 3)
-				idle = atoi(token);
-
+			if( (i == 3 || i == 4) && token != NULL)
+			{
+//				printf("%lld, ", atoll(token));
+				idle += atoll(token);
+			
+			}
+			else if (token != NULL)
+			{
+			
+//				printf("%lld, ",atoll(token));
+				noIdle+=atoll(token);
+			}
 			i++;
 		}
 		
-		idleFraction = 100 - (idle-lastIdle)*100.0/(sum-lastSum);
-		printf("Busy for: %Lf\n", idleFraction);
 
-		lastIdle = idle;
-		lastSum = sum;
+		if(repeatForTimes == 2)
+		{
+			lastIdle = idle;
+			lastNoIdle = noIdle;
+			sleep(1);
+		}
+
 		repeatForTimes --;
-		sleep(2);
-
 	}
 
+	lastTotal = lastIdle + lastNoIdle;
+	total = idle + noIdle;
+	
+//	printf("\nlastTotal: %lld\ntotal: %lld\n lastIdle: %lld\n lastNoIdle: %lld\n idle: %lld\n noIdle: %lld\n", lastTotal, total, lastIdle, lastNoIdle, idle,noIdle);
 
+
+	totald = total - lastTotal;
+	idled = idle-lastIdle;
+//	printf("totlad: %lld, idled: %lld\n", totald, idled);
+
+	float  CPU_Usage = (float)(totald-idled)/(float)totald * 100;
+	printf("CPU Usage: %f %%\n", CPU_Usage);
 	
 }
 
@@ -156,8 +167,6 @@ int main( int argc, char *argv[])
 	
 	processorName();
 	processorUsage();
-	printf("\n");
-
 	getHostName();	
 	return 0;
 }
