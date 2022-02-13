@@ -1,3 +1,11 @@
+/**
+* IPK project 1
+* @file hinfosvc.c
+* @brief Zdrojovy subor serveru 1. projektu IPK FIT VUT
+* @author Dalibor Kralik,xkrali20
+*/
+
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdbool.h>
@@ -7,6 +15,11 @@
 #include<unistd.h>
 
 
+/**
+ * @brief Function which fond out hostname of the servers system
+ *
+ * @param name clean array ready for deploy data in it
+*/
 void getHostName(char name[])
 {
 	FILE *hostName = fopen("/proc/sys/kernel/hostname", "rb");
@@ -30,7 +43,12 @@ void getHostName(char name[])
 	fclose(hostName);
 }
 
-
+/**
+ * @brief Function which find out and calculate CPU usage
+ *
+ * @param usage clean array ready for deployment of data - usage of CPU as a string
+ *
+*/
 
 void processorUsage(char usage[])
 {
@@ -96,6 +114,14 @@ void processorUsage(char usage[])
 
 }
 
+
+/**
+ * @brief Function which find out CPU name from system
+ *
+ * @param name clena array ready for deployment name of CPU 
+ */
+
+
 void processorName(char name[])
 {
 	FILE *cpuName = fopen("/proc/cpuinfo", "rb");
@@ -151,13 +177,14 @@ int portProcessing(int argc, char *argv[])
 
 int main( int argc, char *argv[])
 {
+		//loading and check port/program argument
 	int port = portProcessing(argc, argv);
 	if(port == 0)
 	{
 		fprintf(stderr, "Argument contains invalid character - it has to be integer only\n");
 		return 1;
 	}
-
+		//creating oscket
 	int server_socket;
 	int response_socket;
 	if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
@@ -179,13 +206,13 @@ int main( int argc, char *argv[])
 	server_address.sin_family = AF_INET;
 	server_address.sin_port=htons((unsigned short)port);
 	server_address.sin_addr.s_addr=INADDR_ANY;
-
+		//binding
 	if(bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address))< 0)
 	{
 		fprintf(stderr, "ERROR in Binding\n");
 		exit(1);
 	}
-
+		//set up listening
 	if(listen(server_socket, 3) == -1 )
 	{
 		fprintf(stderr, "ERROR listen failed\n");
@@ -198,6 +225,7 @@ int main( int argc, char *argv[])
 	char delime[] = " ";
 	char returnFunc[1024] = {'\0'};
 	char responseText[1024] = {'\0'};
+		//inifnity loop
 	while(true)
 	{
 	   memset(returnFunc, '\0', 1024);
@@ -211,9 +239,10 @@ int main( int argc, char *argv[])
 		
 		read(response_socket,buffer, 4096 );
 		
-		
+			//parsing user request
 		token =strtok(buffer, delime);
 		token = strtok(NULL, delime);
+			//call requered action
 		if(!strcmp(token, "/hostname"))
 		{
 			getHostName(returnFunc);			
@@ -238,7 +267,7 @@ int main( int argc, char *argv[])
 		{
 			sprintf(returnFunc, "400 Bad Request\n");
 			sprintf(returnFunc, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain;\r\n\r\nBad Request");
-			send(response_socket, responseText, strlen(responseText), 0);
+			send(response_socket, returnFunc, strlen(returnFunc), 0);
 
 		}	
 
