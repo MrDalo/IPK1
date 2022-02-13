@@ -3,12 +3,11 @@
 #include<stdbool.h>
 #include<string.h>
 #include<arpa/inet.h>
-#include<netinet/in.h>
 #include<sys/socket.h>
 #include<unistd.h>
 
 
-void getHostName()
+void getHostName(char name[])
 {
 	FILE *hostName = fopen("/proc/sys/kernel/hostname", "rb");
 	if(hostName == NULL)
@@ -19,11 +18,12 @@ void getHostName()
 
 
 	char chr;
+	int i = 0;
 	while(chr != '\n')
 	{
 		chr = fgetc(hostName);
-		printf("%c", chr);
-
+		name[i] = chr;
+		i++;
 	}
 
 
@@ -32,7 +32,7 @@ void getHostName()
 
 
 
-void processorUsage()
+void processorUsage(char usage[])
 {
 	int repeatForTimes = 2;
 	
@@ -65,14 +65,10 @@ void processorUsage()
 			token = strtok(NULL, delime);
 			if( (i == 3 || i == 4) && token != NULL)
 			{
-//				printf("%lld, ", atoll(token));
 				idle += atoll(token);
-			
 			}
 			else if (token != NULL)
 			{
-			
-//				printf("%lld, ",atoll(token));
 				noIdle+=atoll(token);
 			}
 			i++;
@@ -91,20 +87,16 @@ void processorUsage()
 
 	lastTotal = lastIdle + lastNoIdle;
 	total = idle + noIdle;
-	
-//	printf("\nlastTotal: %lld\ntotal: %lld\n lastIdle: %lld\n lastNoIdle: %lld\n idle: %lld\n noIdle: %lld\n", lastTotal, total, lastIdle, lastNoIdle, idle,noIdle);
-
 
 	totald = total - lastTotal;
 	idled = idle-lastIdle;
-//	printf("totlad: %lld, idled: %lld\n", totald, idled);
 
 	float  CPU_Usage = (float)(totald-idled)/(float)totald * 100;
-	printf("CPU Usage: %f %%\n", CPU_Usage);
-	
+	sprintf(usage, "%.2f%%", CPU_Usage);
+
 }
 
-void processorName()
+void processorName(char name[])
 {
 	FILE *cpuName = fopen("/proc/cpuinfo", "rb");
 	if(cpuName == NULL)
@@ -117,6 +109,7 @@ void processorName()
 	int row = 0;
 	bool doubleDot = false;
 	int offset = 0;
+	int i = 0;
 	while(ch != EOF)
 	{
 		ch = fgetc(cpuName);
@@ -132,11 +125,13 @@ void processorName()
 			{
 				offset++;
 				if(offset > 2)
-					printf("%c", ch);
+				{
+					name[i] = ch;
+					i++;
+				}
 			}
 		}
 	}
-	printf("\n");
 	fclose(cpuName);
 }
 
@@ -156,17 +151,101 @@ int portProcessing(int argc, char *argv[])
 
 int main( int argc, char *argv[])
 {
-
 	int port = portProcessing(argc, argv);
 	if(port == 0)
 	{
-		fprintf(stderr, "Argument contains invalid character - it has to be integer only");
+		fprintf(stderr, "Argument contains invalid character - it has to be integer only\n");
 		return 1;
 	}
-	printf("port: %d\n", port);
+
+	int server_socket;
+	int response_socket;
+	if((server_socket = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
+	{
+		fprintf(stderr, "ERROR socket creating\n");
+		exit(1);
+	}
+
+	int optval = 1;	
+	if(setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, (const void *)&optval, sizeof(int)))
+	{
+		fprintf(stderr, "ERROR in setsockopt function\n");
+		exit(1);
+	}
+
+	struct sockaddr_in server_address;
+	int address_len = sizeof(server_address);
+
+	server_address.sin_family = AF_INET;
+	server_address.sin_port=htons((unsigned short)port);
+	server_address.sin_addr.s_addr=INADDR_ANY;
+
+	if(bind(server_socket, (struct sockaddr *) &server_address, sizeof(server_address))< 0)
+	{
+		fprintf(stderr, "ERROR in Binding\n");
+		exit(1);
+	}
+
+	if(listen(server_socket, 3) == -1 )
+	{
+		fprintf(stderr, "ERROR listen failed\n");
+		exit(1);
+	}
 	
-	processorName();
-	processorUsage();
-	getHostName();	
+
+	char buffer[4096] = {0};
+	char *token;
+	char delime[] = " ";
+	char returnFunc[1024] = {0};
+	char responseText[1024] = {0};
+	while(true)
+	{
+	   memset(returnFunc, '\0', 1024);
+		memset(responseText, '\0', 1024);
+		if((response_socket = accept(server_socket, (struct sockaddr *)&server_address, (socklen_t*)&address_len))< 0 )
+		{
+			fprintf(stderr, "ERROR in accept user response\n");
+			exit(1);
+		}
+		
+		
+		read(response_socket,buffer, 4096 );
+		
+		
+		token =strtok(buffer, delime);
+		token = strtok(NULL, delime);
+		if(!strcmp(token, "/hostname"))
+		{
+			getHostName(returnFunc);			
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n %s", returnFunc);
+			send(response_socket, returnFunc, strlen(returnFunc), 0);
+
+		}
+		else if(!strcmp(token,"/cpu-name"))
+		{
+			processorName(returnFunc);
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n %s", returnFunc);
+			send(response_socket, returnFunc, strlen(returnFunc), 0);
+		}
+		else if(!strcmp(token, "/load"))
+		{
+			processorUsage(returnFunc);
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n %s", returnFunc);
+			send(response_socket, returnFunc, strlen(returnFunc), 0);
+		}
+		else
+		{
+			sprintf(returnFunc, "400 Bad Request\n");
+			sprintf(returnFunc, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain;\r\n\r\n Bad Request");
+			send(response_socket, returnFunc, strlen(returnFunc), 0);
+
+		}	
+
+
+
+		close(response_socket);
+	}
+
+
 	return 0;
 }
