@@ -161,6 +161,10 @@ void processorName(char name[])
 	fclose(cpuName);
 }
 
+/**
+ *@bief Function for checking arguments of program
+ *
+ */
 
 
 int portProcessing(int argc, char *argv[])
