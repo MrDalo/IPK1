@@ -30,12 +30,12 @@ port_number is namber of port, which will server listen to.
 2. In the second command line send request
 3. Kill server with CTR+C
 ### Type of requests:
-	* curl http://localhost:12345/hostname
-		- this request will show hostname of the server's system
-	* curl http://localhost:12345/cpu-name
-		- this request will show CPU name of the server's machine
-	* curl http://localhost:12345/load
-		-this request will show CPU usage
+* curl http://localhost:12345/hostname
+	this request will show hostname of the server's system
+* curl http://localhost:12345/cpu-name
+	this request will show CPU name of the server's machine
+* curl http://localhost:12345/load
+	this request will show CPU usage
 
 ### Example
 ```
