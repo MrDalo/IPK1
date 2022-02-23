@@ -250,27 +250,27 @@ int main( int argc, char *argv[])
 		if(!strcmp(token, "/hostname"))
 		{
 			getHostName(returnFunc);			
-			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n%s", returnFunc);
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\nContent-Length: %ld\r\n\r\n%s",strlen(returnFunc) ,returnFunc);
 			send(response_socket, responseText, strlen(responseText), 0);
 
 		}
 		else if(!strcmp(token,"/cpu-name"))
 		{
 			processorName(returnFunc);
-			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n%s", returnFunc);
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\nConent-Length: %ld\r\n\r\n%s", strlen(returnFunc), returnFunc);
 			send(response_socket, responseText, strlen(responseText), 0);
 		}
 		else if(!strcmp(token, "/load"))
 		{
 			processorUsage(returnFunc);
-			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\n\r\n%s", returnFunc);
+			sprintf(responseText, "HTTP/1.1 200 OK\r\nContent-Type: text/plain;\r\nContent-Length: %ld\r\n\r\n%s",strlen(returnFunc), returnFunc);
 			send(response_socket, responseText, strlen(responseText), 0);
 	
 		}
 		else
 		{
 			sprintf(returnFunc, "400 Bad Request\n");
-			sprintf(returnFunc, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain;\r\n\r\nBad Request");
+			sprintf(returnFunc, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain;\r\nContent-Length: 11\r\n\r\nBad Request");
 			send(response_socket, returnFunc, strlen(returnFunc), 0);
 
 		}	
